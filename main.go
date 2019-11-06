@@ -11,7 +11,7 @@ var (
 	dotenvUse       = envOrDefault("DOTENV", "")
 )
 
-const usage = `usage: dotenv [--environment | -e path] [command] [args...]
+const usage = `Usage: dotenv [--environment | -e path] [command] [args...]
 
 Place a ".env" file at the same level where the current working directory is,
 then execute dotenv [command] [args...].
