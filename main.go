@@ -1,58 +1,91 @@
 package main
 
 import (
-	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 )
 
-var loadedEnvVars = map[string]string{}
+var (
+	dotenvLocations = envOrDefault("DOTENV_FOLDER_PATH", "~/.dotenv/")
+	dotenvUse       = envOrDefault("DOTENV", "")
+)
 
-const usage = `usage:
+const usage = `usage: dotenv [--environment | -e path] [command] [args...]
 
 Place a ".env" file at the same level where the current working directory is,
 then execute dotenv [command] [args...].
 
-The command will be executed, stdin and stdout will be piped, and the exit code
-will be passed to your terminal.`
+Additionally, use a ".env" file from ~/.dotenv/ or wherever $DOTENV_FOLDER_PATH
+points to, by specifying $DOTENV or --environment=filename or -e=filename (without
+the extension) and it will be used automatically.
+
+The command will be executed, stdin, stdout and stderr will be piped, and the
+exit code will be passed to your terminal.`
 
 func main() {
 	var (
 		command string
-		args    []string
+		evfile  string
 	)
 
-	switch len(os.Args) {
-	case 0, 1:
+	args := os.Args[1:]
+
+	if len(os.Args) <= 1 || isFlagSet("-h", "--help") {
+		errexit("%s", usage)
+	}
+
+	if isFlagSet("--environment", "-e") {
+		vals := getFlagValue("--environment", "-e")
+		venv := ""
+
+		if v, found := vals["--environment"]; found {
+			venv = v
+		}
+
+		if v, found := vals["-e"]; found {
+			if venv != "" {
+				errexit("Both flags provided: --environment and -e -- must specify only one")
+			}
+
+			venv = v
+		}
+
+		evfile = filepath.Join(dotenvLocations, venv+".env")
+		args = getAllArgsAfter(venv)
+	}
+
+	switch len(args) {
+	case 0:
 		errexit("%s", usage)
 
-	case 2:
-		command = os.Args[1]
-		args = make([]string, 0)
+	case 1:
+		command = args[0]
+		args = []string{}
 
 	default:
-		command = os.Args[1]
-		args = os.Args[2:]
+		command = args[0]
+		args = args[1:]
 	}
 
-	if err := loadVirtualEnv(".env"); err != nil {
-		if _, isNotExist := err.(*FileNotFound); !isNotExist {
-			errexit("Can't load variables: %s", err.Error())
+	if evfile == "" {
+		evfile = ".env"
+	}
+
+	envvars, err := loadVirtualEnv(evfile)
+	if err != nil {
+		if _, ok := err.(*FileNotFound); ok {
+			errexit("No dotenv file found at %q", evfile)
 		}
-	}
 
-	ev := make([]string, 0, len(os.Environ())+len(loadedEnvVars))
-	ev = append(ev, os.Environ()...)
-
-	for k, v := range loadedEnvVars {
-		ev = append(ev, fmt.Sprintf("%s=%s", k, v))
+		errexit("Can't read environment variable file: %s", err.Error())
 	}
 
 	cmd := exec.Command(command, args...)
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
-	cmd.Env = ev
+	cmd.Env = append(os.Environ(), envvars...)
 
 	if err := cmd.Run(); err != nil {
 		if e, ok := err.(*exec.ExitError); ok {
@@ -61,9 +94,4 @@ func main() {
 
 		errexit("Unable to execute command %q: %s", command, err.Error())
 	}
-}
-
-func errexit(format string, args ...interface{}) {
-	fmt.Fprintf(os.Stderr, "[dotenv] "+format+"\n", args...)
-	os.Exit(1)
 }

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/user"
 	"path/filepath"
 	"strings"
 )
@@ -43,16 +44,34 @@ func loadFile(fp string) (*bytes.Buffer, error) {
 	return &buf, nil
 }
 
-func loadVirtualEnv(fp string) error {
+func expand(path string) (string, error) {
+	if !strings.HasPrefix(path, "~/") {
+		return path, nil
+	}
+
+	usr, err := user.Current()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(usr.HomeDir, path[1:]), nil
+}
+
+func loadVirtualEnv(fp string) ([]string, error) {
 	if fp == "" {
-		return nil
+		return nil, nil
+	}
+
+	fp, err := expand(fp)
+	if err != nil {
+		return nil, fmt.Errorf("unable to expand %q in path: %s", "~", err.Error())
 	}
 
 	data, err := loadFile(fp)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
+	var ev []string
 	sc := bufio.NewScanner(data)
 	for sc.Scan() {
 		k, v := parseLine(sc.Text())
@@ -60,10 +79,10 @@ func loadVirtualEnv(fp string) error {
 			continue
 		}
 
-		loadedEnvVars[k] = v
+		ev = append(ev, k+"="+v)
 	}
 
-	return nil
+	return ev, nil
 }
 
 func parseLine(line string) (string, string) {
@@ -77,4 +96,19 @@ func parseLine(line string) (string, string) {
 	}
 
 	return strings.ToUpper(items[0]), strings.Join(items[1:], "=")
+}
+
+func envOrDefault(key, defval string) string {
+	if v, found := os.LookupEnv(key); found {
+		if s := strings.TrimSpace(v); s != "" {
+			return s
+		}
+	}
+
+	return defval
+}
+
+func errexit(format string, args ...interface{}) {
+	fmt.Fprintf(os.Stderr, "[dotenv] "+format+"\n", args...)
+	os.Exit(1)
 }
