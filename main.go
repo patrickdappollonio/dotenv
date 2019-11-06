@@ -31,8 +31,17 @@ func main() {
 
 	args := os.Args[1:]
 
-	if len(os.Args) <= 1 || isFlagSet("-h", "--help") {
-		errexit("%s", usage)
+	if len(os.Args) <= 1 {
+		errexit("missing command and/or arguments\n\n%s", usage)
+	}
+
+	if isFlagSet("-h", "--help") {
+		os.Stdout.WriteString(usage + "\n")
+		return
+	}
+
+	if dotenvUse != "" {
+		evfile = filepath.Join(dotenvLocations, dotenvUse+".env")
 	}
 
 	if isFlagSet("--environment", "-e") {
@@ -57,7 +66,7 @@ func main() {
 
 	switch len(args) {
 	case 0:
-		errexit("%s", usage)
+		errexit("missing command and/or arguments\n\n%s", usage)
 
 	case 1:
 		command = args[0]
@@ -81,7 +90,7 @@ func main() {
 		errexit("Can't read environment variable file: %s", err.Error())
 	}
 
-	cmd := exec.Command(command, args...)
+	cmd := getCommand(command, args...)
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
