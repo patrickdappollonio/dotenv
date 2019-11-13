@@ -11,11 +11,11 @@ import (
 	"strings"
 )
 
-type FileNotFound struct {
+type filenotfound struct {
 	name string
 }
 
-func (e *FileNotFound) Error() string {
+func (e *filenotfound) Error() string {
 	return "file not found: " + e.name
 }
 
@@ -28,7 +28,7 @@ func loadFile(fp string) (*bytes.Buffer, error) {
 	f, err := os.Open(tmplfile)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return nil, &FileNotFound{name: tmplfile}
+			return nil, &filenotfound{name: tmplfile}
 		}
 
 		return nil, fmt.Errorf("unable to open file %q: %s", fp, err.Error())
@@ -44,8 +44,12 @@ func loadFile(fp string) (*bytes.Buffer, error) {
 	return &buf, nil
 }
 
+func startswith(s, prefix string) bool {
+	return len(s) >= len(prefix) && s[0:len(prefix)] == prefix
+}
+
 func expand(path string) (string, error) {
-	if !strings.HasPrefix(path, "~/") {
+	if !startswith(path, "~/") {
 		return path, nil
 	}
 
@@ -56,7 +60,7 @@ func expand(path string) (string, error) {
 	return filepath.Join(usr.HomeDir, path[1:]), nil
 }
 
-func loadVirtualEnv(fp string) ([]string, error) {
+func loadVirtualEnv(fp string) (map[string]string, error) {
 	if fp == "" {
 		return nil, nil
 	}
@@ -71,22 +75,23 @@ func loadVirtualEnv(fp string) ([]string, error) {
 		return nil, err
 	}
 
-	var ev []string
+	ev := make(map[string]string)
 	sc := bufio.NewScanner(data)
+
 	for sc.Scan() {
 		k, v := parseLine(sc.Text())
 		if k == "" || v == "" {
 			continue
 		}
 
-		ev = append(ev, k+"="+v)
+		ev[k] = v
 	}
 
 	return ev, nil
 }
 
 func parseLine(line string) (string, string) {
-	if strings.HasPrefix(strings.TrimSpace(line), "#") {
+	if startswith(strings.TrimSpace(line), "#") {
 		return "", ""
 	}
 
@@ -111,4 +116,15 @@ func envOrDefault(key, defval string) string {
 func errexit(format string, args ...interface{}) {
 	fmt.Fprintf(os.Stderr, "[dotenv] "+format+"\n", args...)
 	os.Exit(1)
+}
+
+func envFilePresentInHome(filename string) (string, bool) {
+	filename = filepath.Join(dotenvLocations, filename+".env")
+
+	info, err := os.Stat(filename)
+	if os.IsNotExist(err) {
+		return "", false
+	}
+
+	return filename, !info.IsDir()
 }

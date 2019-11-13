@@ -2,19 +2,26 @@ package main
 
 import "os"
 
-func isFlagSet(flag ...string) bool {
-	for i, args := 0, os.Args[1:]; i < len(args); i++ {
-		for j := 0; j < len(flag); j++ {
-			if x := len(flag[j]); x <= len(args[i]) && args[i][:x] == flag[j] {
-				return true
-			}
+func isControlFlagSet(flag ...string) bool {
+	if len(os.Args) <= 1 {
+		return false
+	}
 
-			if args[i] == flag[j] {
-				return true
-			}
+	found := false
+
+	for _, v := range flag {
+		if v == os.Args[1] {
+			found = true
+			break
+		}
+
+		if startswith(os.Args[1], v+"=") {
+			found = true
+			break
 		}
 	}
-	return false
+
+	return found
 }
 
 func getFlagValue(keys ...string) map[string]string {
