@@ -71,11 +71,6 @@ func main() {
 
 	args := os.Args[1:]
 
-	if len(os.Args) <= 1 {
-		logger.Printf("number of arguments not enough to execute: %#v", args)
-		errexit("missing command and/or arguments\n\n%s", usage)
-	}
-
 	if isControlFlagSet("-h", "--help") {
 		os.Stdout.WriteString(usage + "\n")
 		return
