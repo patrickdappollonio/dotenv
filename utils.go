@@ -55,7 +55,7 @@ func expand(path string) (string, error) {
 
 	usr, err := user.Current()
 	if err != nil {
-		return "", err
+		return path, err
 	}
 	return filepath.Join(usr.HomeDir, path[1:]), nil
 }
@@ -120,6 +120,7 @@ func errexit(format string, args ...interface{}) {
 
 func envFilePresentInHome(filename string) (string, bool) {
 	filename = filepath.Join(dotenvLocations, filename+".env")
+	filename, _ = expand(filename)
 
 	info, err := os.Stat(filename)
 	if os.IsNotExist(err) {
