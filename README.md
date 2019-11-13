@@ -1,6 +1,6 @@
 # `dotenv`
 
-[![Build Status](https://travis-ci.org/patrickdappollonio/dotenv.svg?branch=master)](https://travis-ci.org/patrickdappollonio/dotenv) [![Download](https://img.shields.io/badge/download-here-brightgreen?logo=github)](https://github.com/patrickdappollonio/dotenv/releases)
+[![Download](https://img.shields.io/badge/download-here-brightgreen?logo=github)](https://github.com/patrickdappollonio/dotenv/releases) [![Build Status](https://travis-ci.org/patrickdappollonio/dotenv.svg?branch=master)](https://travis-ci.org/patrickdappollonio/dotenv)
 
 Usage: `dotenv [--environment | -e path] [command] [args...]`
 
