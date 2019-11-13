@@ -177,13 +177,28 @@ func main() {
 		delete(envvars, strictKey)
 	}
 
-	vars := make([]string, 0, len(envvars)+len(os.Environ()))
+	environ := make([]string, 0, len(os.Environ()))
+	for _, v := range os.Environ() {
+		known := false
+		for _, m := range knownDotenvVars {
+			if startswith(v, m+"=") {
+				known = true
+			}
+		}
+
+		if !known {
+			logger.Printf("Adding unknown env var %q", v)
+			environ = append(environ, v)
+		}
+	}
+
+	vars := make([]string, 0, len(envvars)+len(environ))
 
 	logOffset := 0
 	if dotenvStrict == "" {
 		logger.Printf("strict mode environment variable not set: appending all current environment variables")
-		vars = append(vars, os.Environ()...)
-		logOffset = len(os.Environ())
+		vars = append(vars, environ...)
+		logOffset = len(environ)
 	}
 
 	for k, v := range envvars {
@@ -199,7 +214,7 @@ func main() {
 		}
 	}
 
-	logger.Printf("environment variables to be injected to command (besides current env vars): %v", vars[logOffset:])
+	logger.Printf("environment variables to be injected to command (besides %d current env vars): %v", len(environ), vars[logOffset:])
 
 	cmd := getCommand(command, args...)
 	cmd.Stdin = os.Stdin
