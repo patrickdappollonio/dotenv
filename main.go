@@ -54,6 +54,11 @@ leak environment variables to your commmands that don't really need them, but al
 keep in mind some programs rely on $PATH to be set, or $HOME or other useful
 environment variables.
 
+A cool example with no arguments but configuration given via environment variables:
+
+	$ DOTENV=<(echo -e "DOTENV_COMMAND=env\nNAME=joe\nDOTENV_STRICT=1") dotenv
+	NAME=joe
+
 dotenv will execute your command, stdin, stdout and stderr will be piped, and the
 exit code will be passed to your terminal.`
 
