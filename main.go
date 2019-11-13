@@ -7,10 +7,19 @@ import (
 	"os/exec"
 )
 
+const (
+	aliasKey  = "DOTENV_COMMAND"
+	strictKey = "DOTENV_STRICT"
+	debugKey  = "DOTENV_DEBUG"
+)
+
 var (
 	dotenvLocations = envOrDefault("DOTENV_FOLDER_PATH", "~/.dotenv/")
 	dotenvUse       = envOrDefault("DOTENV", "")
+	dotenvStrict    = envOrDefault(strictKey, "")
 	version         = "development"
+
+	knownDotenvVars = [...]string{"DOTENV_FOLDER_PATH", "DOTENV", debugKey, strictKey, aliasKey}
 )
 
 const usage = `Usage: dotenv [--environment | -e path] [command] [args...]
@@ -37,15 +46,21 @@ arguments will be sent to the command. For example, the following call will exec
 	# since the command is already set in the dotenv file, you
 	# don't need to specify it like "dotenv -e=kubectl kubectl get pods"
 
+If $DOTENV_STRICT is set to any value, and set either through environment variables
+or in the environment variables file, strict mode is applied, where the command
+gets executed only with the environment variables from the environment file, and
+without the environment variables from the environment. This mode is useful to not
+leak environment variables to your commmands that don't really need them, but also
+keep in mind some programs rely on $PATH to be set, or $HOME or other useful
+environment variables.
+
 dotenv will execute your command, stdin, stdout and stderr will be piped, and the
 exit code will be passed to your terminal.`
-
-const aliasKey = "DOTENV_COMMAND"
 
 func main() {
 	logger := log.New(ioutil.Discard, "[dotenv-debug] ", log.Lshortfile|log.LstdFlags)
 
-	if os.Getenv("DOTENV_DEBUG") != "" {
+	if os.Getenv(debugKey) != "" {
 		logger.SetOutput(os.Stdout)
 	}
 
@@ -162,18 +177,40 @@ func main() {
 		logger.Printf("swapping command due to alias to %q -- args: %#v", command, args)
 	}
 
-	vars := make([]string, 0, len(envvars))
-	for k, v := range envvars {
-		vars = append(vars, k+"="+v)
+	if strict, found := envvars[strictKey]; found {
+		dotenvStrict = strict
+		delete(envvars, strictKey)
 	}
 
-	logger.Printf("environment variables to be injected to command (besides current envs): %v", vars)
+	vars := make([]string, 0, len(envvars)+len(os.Environ()))
+
+	logOffset := 0
+	if dotenvStrict == "" {
+		logger.Printf("strict mode environment variable not set: appending all current environment variables")
+		vars = append(vars, os.Environ()...)
+		logOffset = len(os.Environ())
+	}
+
+	for k, v := range envvars {
+		known := false
+		for _, m := range knownDotenvVars {
+			if m == v {
+				known = true
+			}
+		}
+
+		if !known {
+			vars = append(vars, k+"="+v)
+		}
+	}
+
+	logger.Printf("environment variables to be injected to command (besides current env vars): %v", vars[logOffset:])
 
 	cmd := getCommand(command, args...)
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
-	cmd.Env = append(os.Environ(), vars...)
+	cmd.Env = vars
 
 	logger.Printf("command to be executed: %s %v", command, args)
 

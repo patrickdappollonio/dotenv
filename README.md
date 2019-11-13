@@ -1,6 +1,6 @@
 # `dotenv`
 
-[![Build Status](https://travis-ci.org/patrickdappollonio/dotenv.svg?branch=master)](https://travis-ci.org/patrickdappollonio/dotenv) [![Download](https://img.shields.io/badge/download-release-brightgreen)](https://github.com/patrickdappollonio/dotenv/releases)
+[![Build Status](https://travis-ci.org/patrickdappollonio/dotenv.svg?branch=master)](https://travis-ci.org/patrickdappollonio/dotenv) [![Download](https://img.shields.io/badge/download-here-brightgreen?logo=github)](https://github.com/patrickdappollonio/dotenv/releases)
 
 Usage: `dotenv [--environment | -e path] [command] [args...]`
 
@@ -27,6 +27,14 @@ $ dotenv -e=kubectl get pods
 # since the command is already set in the dotenv file, you
 # don't need to specify it like "dotenv -e=kubectl kubectl get pods"
 ```
+
+If `$DOTENV_STRICT` is set to any value, and set either through environment variables
+or in the environment variables file, strict mode is applied, where the command
+gets executed only with the environment variables from the environment file, and
+without the environment variables from the environment. This mode is useful to not
+leak environment variables to your commmands that don't really need them, but also
+keep in mind some programs rely on `$PATH` to be set, or `$HOME` or other useful
+environment variables.
 
 `dotenv` will execute your command, `stdin`, `stdout` and `stderr` will be piped, and the
 exit code will be passed to your terminal.
