@@ -16,9 +16,9 @@ script:
 - go test ./...
 - go build -o dotenv
 - "./dotenv --version"
-- if [ -z "$TRAVIS_TAG" ]; then exit 0; else GOOS=linux go build -a -tags netgo -ldflags
-  "-s -w -X main.version=$TRAVIS_TAG" -o binaries/dotenv_linux && GOOS=darwin go build
-  -a -tags netgo -ldflags "-s -w -X main.version=$TRAVIS_TAG" -o binaries/dotenv_darwin
+- if [ -z "$TRAVIS_TAG" ]; then exit 0; else
+  GOOS=linux go build -a -tags netgo -ldflags "-s -w -X main.version=$TRAVIS_TAG" -o binaries/dotenv_linux &&
+  GOOS=darwin go build -a -tags netgo -ldflags "-s -w -X main.version=$TRAVIS_TAG" -o binaries/dotenv_darwin ;
   fi
 
 deploy:

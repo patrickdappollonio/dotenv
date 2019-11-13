@@ -26,8 +26,8 @@ key=value format.
 
 If the dotenv file sets an environment variable named DOTENV_COMMAND whose value
 is a valid, runnable command, the command will be used and all the remaining
-arguments will be omitted. For example, the following call will execute "kubectl
-get pods"
+arguments will be sent to the command. For example, the following call will execute
+"kubectl get pods"
 
 	$ cat ~/.dotenv/kubectl.env
 	DOTENV_COMMAND=kubectl
