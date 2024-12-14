@@ -106,22 +106,25 @@ fn main() -> Result<()> {
     cmd.args(args);
 
     // On Linux, set the Pdeathsig so the child receives SIGTERM if the parent dies
-    #[cfg(target_os = "linux")]
-    {
-        use nix::sys::{prctl, signal};
-        use nix::unistd;
+    // #[cfg(target_os = "linux")]
+    // {
+    use rustix::process::{getppid, set_parent_process_death_signal, Pid, Signal};
 
-        // Set PDEATHSIG to SIGTERM and SIGKILL
-        prctl::set_pdeathsig(signal::Signal::SIGTERM).context("Failed to set PDEATHSIG")?;
-        prctl::set_pdeathsig(signal::Signal::SIGKILL).context("Failed to set PDEATHSIG")?;
+    // Set PDEATHSIG to SIGTERM and SIGKILL
+    set_parent_process_death_signal(Option::from(Signal::Kill))
+        .context("Failed to set PDEATHSIG")?;
+    set_parent_process_death_signal(Option::from(Signal::Term))
+        .context("Failed to set PDEATHSIG")?;
 
-        // Double-check parent PID
-        let ppid = unistd::getppid();
-        if ppid == unistd::Pid::from_raw(1) {
+    // Double-check parent PID
+    match getppid() {
+        Some(Pid::INIT) | None => {
             // The parent is init, meaning we won't get PDEATHSIG if the original parent is gone
             anyhow::bail!("Unable to operate on a program whose parent is init");
         }
-    }
+        _ => {}
+    };
+    // }
 
     // Grab the exit code from the executed program
     let status = cmd
