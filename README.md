@@ -1,6 +1,17 @@
 # `dotenv`
 
+[![Download](https://img.shields.io/badge/download-here-brightgreen?logo=github)](https://github.com/patrickdappollonio/dotenv/releases)
+[![Github Downloads](https://img.shields.io/github/downloads/patrickdappollonio/dotenv/total?color=orange&label=github%20downloads&logo=github)](https://github.com/patrickdappollonio/dotenv/releases)
+
 **`dotenv`** is a small command-line utility that allows you to **inject environment variables from a `.env` file into a command's environment before running it.** It also supports a "strict" mode that only includes variables from the `.env` file without leaking potentially private environment variables, plus a few common whitelist of essential environment variables, like `PATH`, `HOME` or even `SHLVL`.
+
+```bash
+$ cat .env
+HELLO=world
+
+$ dotenv -- printenv HELLO
+world
+```
 
 - [`dotenv`](#dotenv)
   - [Features](#features)
@@ -81,9 +92,7 @@ dotenv [OPTIONS] -- COMMAND [ARGS...]
 
 ### From the current working directory
 
-By default, `dotenv` loads environment variables from a `.env` file in the current working directory if you specify no arguments.
-
-Consider the following scenario:
+By default, `dotenv` loads environment variables from a `.env` file in the current working directory if you specify no arguments:
 
 ```bash
 $ cat .env
