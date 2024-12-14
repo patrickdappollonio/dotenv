@@ -1,6 +1,6 @@
 # `dotenv`
 
-**dotenv** is a small command-line utility that allows you to inject environment variables from a `.env` file into a command's environment before running it. It also supports a "strict" mode that only includes variables from the `.env` file plus a few common whitelist of essential environment variables, like `PATH`, `HOME` or even `SHLVL`.
+**`dotenv`** is a small command-line utility that allows you to **inject environment variables from a `.env` file into a command's environment before running it.** It also supports a "strict" mode that only includes variables from the `.env` file without leaking potentially private environment variables, plus a few common whitelist of essential environment variables, like `PATH`, `HOME` or even `SHLVL`.
 
 - [`dotenv`](#dotenv)
   - [Features](#features)
@@ -20,11 +20,12 @@
   If an `.env` file is present in the current directory, `dotenv` loads it automatically.
 
 - **Named environments:**
-  Use `--environment <name>` to load variables from `~/.dotenv/<name>.env`.
+  Use `--environment <name>` to load variables from `$HOME/.dotenv/<name>.env`.
 
 - **Strict mode:**
   Use `--strict` to start the command with only the variables from the `.env` file and a minimal whitelist (like `PATH`, `HOME`, etc.).
-  The `.env` file itself can enforce strict mode by setting `DOTENV_STRICT=true`.
+
+  The `.env` file itself can enforce strict mode by setting `DOTENV_STRICT=true` without needing to specify `--strict`.
 
 - **Transparent command execution:**
   After loading the environment variables, `dotenv` executes the specified command, passing all arguments along.
@@ -32,13 +33,27 @@
 - **Compatibility with commands requiring their own flags:**
   Use a double dash (`--`) to signal that subsequent arguments belong to the executed command, not to `dotenv`.
 
+- **Death signal propagation:**
+  If the parent is killed by a `SIGTERM` or `SIGKILL` signal, the child process is also killed using `PR_SET_PDEATHSIG` *(only available in Linux)*.
+
 ## Installation
 
 ### Precompiled Binaries
 
 Precompiled binaries for Linux, macOS, and Windows are available on the [Releases page](https://github.com/patrickdappollonio/dotenv/releases).
 
-Download the binary for your platform, then move it to a directory in your `PATH`.
+Download the binary for your platform, then move it to a directory in your `$PATH`, or use `install`:
+
+```bash
+$ ls
+dotenv
+
+# add executable permissions
+$ chmod +x dotenv
+
+# install it to /usr/local/bin
+$ sudo install -m 755 dotenv /usr/local/bin/dotenv
+```
 
 ### Rust and Cargo
 
@@ -85,7 +100,7 @@ If you prefer custom environment variables, you can overwrite `dotenv`'s default
 Any file here named `<name>.env` can be loaded by specifying `--environment <name>` or `-e <name>`:
 
 ```bash
-$ cat ~/.dotenv/example.env
+$ cat $HOME/.dotenv/example.env
 FOO=bar
 
 $ dotenv --environment example -- printenv FOO

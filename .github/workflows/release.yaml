@@ -1,0 +1,51 @@
+name: Release Rust Application
+
+on:
+  release:
+    types: [created]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Release for ${{ matrix.target }}
+    strategy:
+      matrix:
+        include:
+          - target: aarch64-unknown-linux-gnu
+            os: ubuntu-latest
+            archive: linux-arm64
+          - target: aarch64-apple-darwin
+            os: macos-latest
+            archive: darwin-arm64
+          - target: x86_64-apple-darwin
+            os: macos-latest
+            archive: darwin-x86_64
+          - target: x86_64-unknown-linux-gnu
+            os: ubuntu-latest
+            archive: linux-x86_64
+          - target: x86_64-pc-windows-msvc
+            os: windows-latest
+            archive: windows-x86_64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - shell: bash
+        run: |
+          # Update the version in Cargo.toml
+          TAG_NAME="${{ github.event.release.tag_name }}"
+          TAG_NAME="${TAG_NAME#v}"
+          if [[ "${{ runner.os }}" == "macOS" ]]; then
+              sed -i"" -e "s/^version = .*/version = \"$TAG_NAME\"/" Cargo.toml
+          else
+              sed -i -e "s/^version = .*/version = \"$TAG_NAME\"/" Cargo.toml
+          fi
+      - uses: taiki-e/upload-rust-binary-action@v1
+        with:
+          bin: gc-rust
+          archive: $bin-$tag-${{ matrix.archive }}
+          target: ${{ matrix.target }}
+          tar: unix
+          zip: windows
+          token: ${{ secrets.GITHUB_TOKEN }}

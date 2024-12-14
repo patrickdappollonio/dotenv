@@ -118,6 +118,11 @@ fn main() -> Result<()> {
                     return Err(Error::last_os_error());
                 }
 
+                // Set the parent-death signal to SIGKILL
+                if libc::prctl(libc::PR_SET_PDEATHSIG, libc::SIGKILL, 0, 0, 0) != 0 {
+                    return Err(Error::last_os_error());
+                }
+
                 // Double-check parent PID
                 let ppid = libc::getppid();
                 if ppid == 1 {
