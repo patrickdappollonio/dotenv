@@ -1,129 +1,134 @@
 # `dotenv`
 
-[![Download](https://img.shields.io/badge/download-here-brightgreen?logo=github)](https://github.com/patrickdappollonio/dotenv/releases) [![Build Status](https://travis-ci.org/patrickdappollonio/dotenv.svg?branch=master)](https://travis-ci.org/patrickdappollonio/dotenv)
+**dotenv** is a small command-line utility that allows you to inject environment variables from a `.env` file into a command's environment before running it. It also supports a "strict" mode that only includes variables from the `.env` file plus a few common whitelist of essential environment variables, like `PATH`, `HOME` or even `SHLVL`.
 
-Usage: `dotenv [--environment | -e path] [command] [args...]`
+- [`dotenv`](#dotenv)
+  - [Features](#features)
+  - [Installation](#installation)
+    - [Precompiled Binaries](#precompiled-binaries)
+    - [Rust and Cargo](#rust-and-cargo)
+  - [Usage](#usage)
+    - [Loading environment variables](#loading-environment-variables)
+    - [From the current working directory](#from-the-current-working-directory)
+    - [From a named environment](#from-a-named-environment)
+    - [Strict Mode](#strict-mode)
+  - [`.env` Format](#env-format)
 
-Place a `.env` file at the same level where the current working directory is,
-then execute `dotenv [command] [args...]`.
+## Features
 
-Additionally, use a `.env` file from `~/.dotenv/` or wherever `$DOTENV_FOLDER_PATH`
-points to, by specifying `$DOTENV` or `--environment=filename` or `-e=filename` (without
-the extension) and it will be used automatically. If the path passed is absolute,
-then whatever file passed will be used as environment if it can be parsed as a
-`key=value` format.
+- **Automatic `.env` loading:**
+  If an `.env` file is present in the current directory, `dotenv` loads it automatically.
 
-If the `dotenv` file sets an environment variable named `DOTENV_COMMAND` whose value
-is a valid, runnable command, the command will be used and all the remaining
-arguments will be sent to the command. For example, the following call will execute
-`kubectl get pods`
+- **Named environments:**
+  Use `--environment <name>` to load variables from `~/.dotenv/<name>.env`.
 
-```bash
-$ cat ~/.dotenv/kubectl.env
-DOTENV_COMMAND=kubectl
-KUBECONFIG=/home/patrick/.kube/cluster.yaml
+- **Strict mode:**
+  Use `--strict` to start the command with only the variables from the `.env` file and a minimal whitelist (like `PATH`, `HOME`, etc.).
+  The `.env` file itself can enforce strict mode by setting `DOTENV_STRICT=true`.
 
-$ dotenv -e=kubectl get pods
-# since the command is already set in the dotenv file, you
-# don't need to specify it like "dotenv -e=kubectl kubectl get pods"
-```
+- **Transparent command execution:**
+  After loading the environment variables, `dotenv` executes the specified command, passing all arguments along.
 
-If `$DOTENV_STRICT` is set to any value, and set either through environment variables
-or in the environment variables file, strict mode is applied, where the command
-gets executed only with the environment variables from the environment file, and
-without the environment variables from the environment. This mode is useful to not
-leak environment variables to your commmands that don't really need them, but also
-keep in mind some programs rely on `$PATH` to be set, or `$HOME` or other useful
-environment variables.
-
-A cool example with no arguments but configuration given via environment variables:
-
-```bash
-$ DOTENV=<(echo -e "DOTENV_COMMAND=env\nNAME=joe\nDOTENV_STRICT=1") dotenv
-NAME=joe
-```
-
-`dotenv` will execute your command, `stdin`, `stdout` and `stderr` will be piped, and the
-exit code will be passed to your terminal.
+- **Compatibility with commands requiring their own flags:**
+  Use a double dash (`--`) to signal that subsequent arguments belong to the executed command, not to `dotenv`.
 
 ## Installation
 
-[Download the binary from the Releases page](https://github.com/patrickdappollonio/dotenv/releases)
-and place the binary in a place in your `$PATH`. Then simply call `dotenv` with whatever
-configuration needed.
+### Precompiled Binaries
 
-## ... but why?
+Precompiled binaries for Linux, macOS, and Windows are available on the [Releases page](https://github.com/patrickdappollonio/dotenv/releases).
 
-`dotenv` comes as a solution to a problem I was running pretty often. I do a lot of
-terminal stuff and some CLIs use files to configure themselves while others use a
-combination of an environment variable that somehows configure the rest of the CLI via
-a file.
+Download the binary for your platform, then move it to a directory in your `PATH`.
 
-As an example, the `openstack` CLI uses `OS_CLOUD` to define a "cloud configuration" which
-is then taken from the file at `~/.config/openstack/clouds.yaml` which can define multiple
-clouds. I'm always changing which cloud I use, and I realize `openstack` can also be
-configured with environment variables such as:
+### Rust and Cargo
 
-```bash
-export OS_AUTH_URL=<url-to-openstack-identity>
-export OS_PROJECT_NAME=<project-name>
-export OS_USERNAME=<user-name>
-export OS_PASSWORD=<password>  # (optional)
-```
+1. Ensure you have [Rust and Cargo](https://www.rust-lang.org/tools/install) installed.
+2. Clone this repository:
+   ```bash
+   git clone https://github.com/yourusername/dotenv.git
+   cd dotenv
+   ```
+3. Build the project:
+   ```bash
+   cargo build --release
+   ```
+4. The compiled binary can be found in `target/release/dotenv`.
 
-So rather than doing that, I created a few files in `~/.dotenv/` which point to a specific
-cloud configuration, say `~/.dotenv/cloud1.env`, `~/.dotenv/cloud2.env`. They all contain
-the same set of environment variables but with different values, plus, they contain a single
-`DOTENV_COMMAND` variable which is always set to `openstack`, like this:
-
-```
-DOTENV_COMMAND=openstack
-OS_AUTH_URL=<url-to-openstack-identity>
-OS_PROJECT_NAME=<project-name>
-OS_USERNAME=<user-name>
-OS_PASSWORD=<password>  # (optional)
-```
-
-Now, depending on what cloud I want to execute commands, like getting servers (`openstack server list`)
-or loadbalancers (`openstack loadbalancer list`), I simply do:
+## Usage
 
 ```bash
-$ dotenv -e=cloud1 server list
-$ dotenv -e=cloud2 loadbalancer list
+dotenv [OPTIONS] -- COMMAND [ARGS...]
 ```
 
-Or I can even alias the commands to work a bit faster:
+### Loading environment variables
 
-```bash
-alias os1='dotenv -e=cloud1'
-alias os2='dotenv -e=cloud2'
-```
+`dotenv` supports two modes of operation: loading environment variables from a `.env` file in the current directory or from a named environment file.
 
-I realize though that, at the end, we come down to managing multiple files rather than just one
-(as in, we went from one `clouds.yaml` to 2 `.env` files), but the solution is highly scriptable
-and oftentimes the `clouds.yaml` file is being edited to support new clouds (I work with quite a
-few usernames, passwords and cloud endpoints).
+### From the current working directory
 
-Other more commonly used feature is that I store some `.env` file in the local directory where I'm
-developing a Go web server which needs to have environment variables that I can't post to Github,
-like `$PORT` or even `$SMTP_USERNAME`. This is the easiest to solve with `dotenv` because of this:
+By default, `dotenv` loads environment variables from a `.env` file in the current working directory if you specify no arguments.
+
+Consider the following scenario:
 
 ```bash
 $ cat .env
-PORT=8081
-SMTP_HOST=localhost
-SMTP_USER=patrick
-SMTP_PASS=demo
+HELLO=world
 
-$ dotenv go run *.go
-Server listening on port 8081...
+$ dotenv -- printenv HELLO
+world
 ```
 
-## Adding new features?
+### From a named environment
 
-I welcome any Pull Request. The license of this software is also permissive enough that
-you can make it yours and / or use it in corporate environments. The sky is the limit!
+If you prefer custom environment variables, you can overwrite `dotenv`'s default `.env` file by specifying a different file. This file however has to come from `dotenv`'s configuration directory, which is `$HOME/.dotenv/`.
 
-Most of the code here has been written in a rush, so assume typos are a thing. You can
-also see there's a lack of testing, so if you're into that, send me a PR! No PR is
-useless when it comes down to this app.
+Any file here named `<name>.env` can be loaded by specifying `--environment <name>` or `-e <name>`:
+
+```bash
+$ cat ~/.dotenv/example.env
+FOO=bar
+
+$ dotenv --environment example -- printenv FOO
+bar
+```
+
+### Strict Mode
+
+Sometimes we might not trust a specific command from wreaking havoc in our environment, and we would rather provide just a limited set of environment variables without exposing the entire environment. This is where strict mode comes in.
+
+A common case scenario might be that you have an environment where you have your AWS credentials stored in the environment variables. You might not want to expose these to a command that you don't trust.
+
+To avoid this, simply run the command with the `--strict` flag:
+
+```bash
+$ printenv AWS_ACCESS_KEY_ID
+AKIAIOSFODNN7EXAMPLE
+
+$ dotenv --strict -- printenv AWS_ACCESS_KEY_ID
+# no output
+
+$ dotenv --strict -- printenv PATH
+/usr/local/bin:/usr/bin:/bin
+```
+
+The program still received some basic environment variables that are often needed to find other programs, but none of the AWS credentials were exposed.
+
+> [!CAUTION]
+> **`dotenv` makes no effort preventing the program to gain access to these environment variables** by other means (like reading configuration files or the untrusted program being able to upload your entire configuration to a remote location).
+> It only prevents them from being passed directly to the program.
+
+## `.env` Format
+
+Use simple `KEY=VALUE` lines:
+
+```env
+# A comment line
+FOO=bar
+MYNAME=Alice
+DOTENV_STRICT=true
+```
+
+- Lines starting with `#` are ignored as comments.
+- Trailing comments after `#` on the same line are also ignored, and the lines are space-trimmed.
+- Empty lines are ignored.
+- Shebangs (`#!`) are ignored and have no effect on how we run the command.
