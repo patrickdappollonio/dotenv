@@ -13,6 +13,12 @@ jobs:
     strategy:
       matrix:
         include:
+          - target: aarch64-unknown-linux-musl
+            os: ubuntu-latest
+            archive: linux-static-arm64
+          - target: x86_64-unknown-linux-musl
+            os: ubuntu-latest
+            archive: linux-static-x86_64
           - target: aarch64-unknown-linux-gnu
             os: ubuntu-latest
             archive: linux-arm64
@@ -28,6 +34,12 @@ jobs:
           - target: x86_64-pc-windows-msvc
             os: windows-latest
             archive: windows-x86_64
+          - target: x86_64-unknown-freebsd
+            os: ubuntu-latest
+            archive: freebsd-x86_64
+          - target: aarch64-unknown-freebsd
+            os: ubuntu-latest
+            archive: freebsd-arm64
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4

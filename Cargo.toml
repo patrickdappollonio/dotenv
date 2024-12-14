@@ -15,3 +15,4 @@ which = "7.0.0"
 opt-level = "z"   # Optimize for size.
 lto = true        # Enable link time optimization.
 codegen-units = 1 # Reduce parallel code generation units.
+strip = "symbols" # Strip debug symbols.
