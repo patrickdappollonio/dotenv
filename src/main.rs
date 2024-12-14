@@ -182,8 +182,12 @@ mod tests {
     fn test_is_truthy() {
         assert!(is_truthy("true"));
         assert!(is_truthy("True"));
+        assert!(is_truthy("t"));
+        assert!(is_truthy("T"));
         assert!(is_truthy("yes"));
         assert!(is_truthy("YES"));
+        assert!(is_truthy("y"));
+        assert!(is_truthy("Y"));
         assert!(is_truthy("1"));
         assert!(!is_truthy("false"));
         assert!(!is_truthy("no"));
