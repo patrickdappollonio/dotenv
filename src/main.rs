@@ -99,12 +99,44 @@ fn main() -> Result<()> {
 
     // Execute the program with the new variables
     let (program, args) = cli.command.split_first().context("No program specified")?;
-    let status = Command::new(program)
-        .args(args)
-        .status()
-        .with_context(|| format!("Failed to execute command: {}", program))?;
+
+    // Create the command and set the arguments apart so they outlive
+    // the borrow checker
+    let mut cmd = Command::new(program);
+    cmd.args(args);
+
+    // On Linux, set the Pdeathsig so the child receives SIGTERM if the parent dies
+    #[cfg(target_os = "linux")]
+    {
+        use std::io::{Error, ErrorKind};
+        use std::os::unix::process::CommandExt;
+
+        unsafe {
+            cmd.pre_exec(|| {
+                // Set the parent-death signal to SIGTERM
+                if libc::prctl(libc::PR_SET_PDEATHSIG, libc::SIGTERM, 0, 0, 0) != 0 {
+                    return Err(Error::last_os_error());
+                }
+
+                // Double-check parent PID
+                let ppid = libc::getppid();
+                if ppid == 1 {
+                    // The parent is init, meaning we won't get PDEATHSIG if the original parent is gone
+                    return Err(Error::new(
+                        ErrorKind::Other,
+                        "Unable to operate on a program whose parent is init",
+                    ));
+                }
+
+                Ok(())
+            });
+        }
+    }
 
     // Grab the exit code from the executed program
+    let status = cmd
+        .status()
+        .with_context(|| format!("Failed to execute command: {}", program))?;
     std::process::exit(status.code().unwrap_or(1));
 }
 
@@ -118,7 +150,10 @@ fn clear_environment() {
 
 /// Check if a value is considered truthy
 fn is_truthy(value: &str) -> bool {
-    matches!(value.to_lowercase().as_str(), "true" | "yes" | "1")
+    matches!(
+        value.to_lowercase().as_str(),
+        "1" | "t" | "true" | "y" | "yes"
+    )
 }
 
 fn get_named_env_file(name: &str) -> Result<Option<PathBuf>> {
