@@ -108,7 +108,7 @@ fn main() -> Result<()> {
     // On Linux, set the Pdeathsig so the child receives SIGTERM if the parent dies
     #[cfg(target_os = "linux")]
     {
-        use std::io::{Error, ErrorKind};
+        use std::io::Error;
         use std::os::unix::process::CommandExt;
 
         unsafe {
@@ -123,18 +123,42 @@ fn main() -> Result<()> {
                     return Err(Error::last_os_error());
                 }
 
-                // Double-check parent PID
-                let ppid = libc::getppid();
-                if ppid == 1 {
-                    // The parent is init, meaning we won't get PDEATHSIG if the original parent is gone
-                    return Err(Error::new(
-                        ErrorKind::Other,
-                        "Unable to operate on a program whose parent is init",
-                    ));
+                Ok(())
+            });
+        }
+    }
+
+    // On FreeBSD, set the Pdeathsig so the child receives SIGTERM if the parent dies
+    #[cfg(target_os = "freebsd")]
+    {
+        use std::io::Error;
+        use std::os::unix::process::CommandExt;
+
+        unsafe {
+            cmd.pre_exec(|| {
+                if libc::procctl(libc::P_PID, 0, libc::PROC_PDEATHSIG, libc::SIGTERM) != 0 {
+                    return Err(Error::last_os_error());
+                }
+
+                if libc::procctl(libc::P_PID, 0, libc::PROC_PDEATHSIG, libc::SIGKILL) != 0 {
+                    return Err(Error::last_os_error());
                 }
 
                 Ok(())
             });
+        }
+    };
+
+    // Check if the parent is init, which means we won't get PDEATHSIG
+    #[cfg(any(target_os = "linux", target_os = "freebsd"))]
+    {
+        unsafe {
+            // Double-check parent PID
+            let ppid = libc::getppid();
+            if ppid == 1 {
+                // The parent is init, meaning we won't get PDEATHSIG if the original parent is gone
+                anyhow::bail!("Unable to operate on a program whose parent is init");
+            }
         }
     }
 
