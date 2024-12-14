@@ -108,33 +108,18 @@ fn main() -> Result<()> {
     // On Linux, set the Pdeathsig so the child receives SIGTERM if the parent dies
     #[cfg(target_os = "linux")]
     {
-        use std::io::{Error, ErrorKind};
-        use std::os::unix::process::CommandExt;
+        use nix::sys::{prctl, signal};
+        use nix::unistd;
 
-        unsafe {
-            cmd.pre_exec(|| {
-                // Set the parent-death signal to SIGTERM
-                if libc::prctl(libc::PR_SET_PDEATHSIG, libc::SIGTERM, 0, 0, 0) != 0 {
-                    return Err(Error::last_os_error());
-                }
+        // Set PDEATHSIG to SIGTERM and SIGKILL
+        prctl::set_pdeathsig(signal::Signal::SIGTERM).context("Failed to set PDEATHSIG")?;
+        prctl::set_pdeathsig(signal::Signal::SIGKILL).context("Failed to set PDEATHSIG")?;
 
-                // Set the parent-death signal to SIGKILL
-                if libc::prctl(libc::PR_SET_PDEATHSIG, libc::SIGKILL, 0, 0, 0) != 0 {
-                    return Err(Error::last_os_error());
-                }
-
-                // Double-check parent PID
-                let ppid = libc::getppid();
-                if ppid == 1 {
-                    // The parent is init, meaning we won't get PDEATHSIG if the original parent is gone
-                    return Err(Error::new(
-                        ErrorKind::Other,
-                        "Unable to operate on a program whose parent is init",
-                    ));
-                }
-
-                Ok(())
-            });
+        // Double-check parent PID
+        let ppid = unistd::getppid();
+        if ppid == unistd::Pid::from_raw(1) {
+            // The parent is init, meaning we won't get PDEATHSIG if the original parent is gone
+            anyhow::bail!("Unable to operate on a program whose parent is init");
         }
     }
 
