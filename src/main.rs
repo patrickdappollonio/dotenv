@@ -236,4 +236,151 @@ mod tests {
         clear_environment();
         assert!(env::var("TESTVAR").is_err());
     }
+
+    #[test]
+    fn test_strict_mode_removes_unlisted_vars() -> anyhow::Result<()> {
+        // Set some environment variables that should NOT persist in strict mode
+        env::set_var("UNSAFE_VAR", "123");
+        env::set_var("PATH", "/usr/bin"); // PATH is whitelisted and should remain
+
+        let mut file = NamedTempFile::new()?;
+        writeln!(file, "CUSTOM_VAR=Hello")?;
+        let location = path::absolute(file.path())?;
+
+        // Simulate CLI arguments: --strict and a dummy command (e.g. "echo")
+        let cli_args = vec![
+            "dotenv",
+            "--strict",
+            "--environment",
+            location.to_str().unwrap(),
+            "echo",
+            "test",
+        ];
+        let cli = Cli::parse_from(cli_args);
+        assert!(cli.strict);
+
+        // Clear environment in the main function and re-set it based on strict mode
+        clear_environment();
+        env::set_var("UNSAFE_VAR", "123");
+        env::set_var("PATH", "/usr/bin");
+
+        let env_vars_from_file = env_parser::parse_env_file(&location)?;
+        let mut new_env_vars: HashMap<String, String> = HashMap::new();
+        for &var in STRICT_WHITELIST {
+            if let Ok(val) = env::var(var) {
+                new_env_vars.insert(var.to_string(), val);
+            }
+        }
+        for (key, value) in env_vars_from_file {
+            new_env_vars.insert(key, value);
+        }
+
+        clear_environment();
+        for (key, value) in new_env_vars.clone() {
+            env::set_var(key, value);
+        }
+
+        // Check environment after strict mode application
+        assert!(env::var("UNSAFE_VAR").is_err());
+        assert_eq!(env::var("CUSTOM_VAR").unwrap(), "Hello");
+        assert!(env::var("PATH").is_ok());
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_non_strict_mode_keeps_existing_vars() -> anyhow::Result<()> {
+        // Simulate existing environment variable
+        env::set_var("EXISTING_VAR", "EXISTING_VALUE");
+
+        let mut file = NamedTempFile::new()?;
+        writeln!(file, "NEW_VAR=NEW_VALUE")?;
+        let location = path::absolute(file.path())?;
+
+        // Run without --strict
+        let cli_args = vec![
+            "dotenv",
+            "--environment",
+            location.to_str().unwrap(),
+            "echo",
+            "test",
+        ];
+        let cli = Cli::parse_from(cli_args);
+        assert!(!cli.strict);
+
+        let env_vars_from_file = env_parser::parse_env_file(&location)?;
+
+        for (key, value) in env_vars_from_file {
+            env::set_var(key, value);
+        }
+
+        // Check that both the existing var and new var are present
+        assert_eq!(env::var("EXISTING_VAR").unwrap(), "EXISTING_VALUE");
+        assert_eq!(env::var("NEW_VAR").unwrap(), "NEW_VALUE");
+        Ok(())
+    }
+
+    #[test]
+    fn test_missing_environment_file() -> anyhow::Result<()> {
+        let non_existent = PathBuf::from("this_file_does_not_exist.env");
+
+        // Attempt to parse a non-existent file
+        let vars = env_parser::parse_env_file(&non_existent);
+        // Since the function tries to read a non-existent file, it should error out
+        // but you might handle this differently in your code. If you return Ok with empty,
+        // adjust this test accordingly.
+        assert!(vars.is_err());
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_env_file_strict_mode_applied() -> anyhow::Result<()> {
+        let mut file = NamedTempFile::new()?;
+        writeln!(file, "DOTENV_STRICT=true")?;
+        writeln!(file, "MYVAR=SHOULD_EXIST")?;
+        let location = path::absolute(file.path())?;
+
+        let cli_args = vec![
+            "dotenv",
+            "--environment",
+            location.to_str().unwrap(),
+            "echo",
+            "test",
+        ];
+        let cli = Cli::parse_from(cli_args);
+
+        let mut strict = cli.strict;
+        let env_vars = env_parser::parse_env_file(&location)?;
+        if !strict {
+            if let Some(val) = env_vars.get("DOTENV_STRICT") {
+                if is_truthy(val) {
+                    strict = true;
+                }
+            }
+        }
+        assert!(strict);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_env_overrides_system_in_non_strict_mode() -> anyhow::Result<()> {
+        // Set a system var
+        env::set_var("FOO", "SYSTEM_VALUE");
+
+        let mut file = NamedTempFile::new()?;
+        writeln!(file, "FOO=FILE_VALUE")?;
+        let location = path::absolute(file.path())?;
+
+        // Non-strict mode
+        let env_vars = env_parser::parse_env_file(&location)?;
+        for (key, value) in env_vars {
+            env::set_var(key, value);
+        }
+
+        // The environment var should now be overridden
+        assert_eq!(env::var("FOO").unwrap(), "FILE_VALUE");
+        Ok(())
+    }
 }

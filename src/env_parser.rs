@@ -65,7 +65,26 @@ fn parse_env_line(line: &str) -> Option<(String, String)> {
         return None;
     }
 
+    let val = strip_quotes(val).trim();
+
     Some((key.to_string(), val.to_string()))
+}
+
+/// Strip leading and trailing quotes from a string.
+fn strip_quotes(s: &str) -> &str {
+    let trimmed = s.trim();
+    if trimmed.len() >= 2 {
+        let bytes = trimmed.as_bytes();
+        let first = bytes[0];
+        let last = bytes[trimmed.len() - 1];
+
+        // Check if the value is wrapped in matching single or double quotes
+        if (first == b'"' && last == b'"') || (first == b'\'' && last == b'\'') {
+            return &trimmed[1..trimmed.len() - 1];
+        }
+    }
+
+    trimmed
 }
 
 #[cfg(test)]
@@ -148,6 +167,89 @@ mod tests {
         // "INVALIDLINE" and "NOTHING=" should be ignored.
         assert!(!vars.contains_key("INVALIDLINE"));
         assert!(!vars.contains_key("NOTHING"));
+        Ok(())
+    }
+
+    #[test]
+    fn test_parse_env_str_quoted_values() -> Result<()> {
+        let input = r#"
+        KEY="some value with spaces"
+        ANOTHER='single quoted value'
+        MIXED="leading and trailing spaces  "
+    "#;
+
+        let vars = parse_env_str(input)?;
+        assert_eq!(vars.get("KEY"), Some(&"some value with spaces".to_string()));
+        assert_eq!(
+            vars.get("ANOTHER"),
+            Some(&"single quoted value".to_string())
+        );
+        assert_eq!(
+            vars.get("MIXED"),
+            Some(&"leading and trailing spaces".to_string())
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn test_parse_env_str_values_with_equals() -> Result<()> {
+        let input = r#"
+        KEY=VALUE=WITH=EQUALS
+        DATABASE_URL=mysql://user:pass@localhost/dbname
+    "#;
+
+        let vars = parse_env_str(input)?;
+        assert_eq!(vars.get("KEY"), Some(&"VALUE=WITH=EQUALS".to_string()));
+        assert_eq!(
+            vars.get("DATABASE_URL"),
+            Some(&"mysql://user:pass@localhost/dbname".to_string())
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn test_parse_env_str_whitespace_around_equals() -> Result<()> {
+        let input = r#"
+        KEY    =     VALUE
+        TRIM   =    TRIMMED
+    "#;
+
+        let vars = parse_env_str(input)?;
+        assert_eq!(vars.get("KEY"), Some(&"VALUE".to_string()));
+        assert_eq!(vars.get("TRIM"), Some(&"TRIMMED".to_string()));
+        Ok(())
+    }
+
+    #[test]
+    fn test_parse_env_str_empty_key_or_value() -> Result<()> {
+        let input = r#"
+        =VALUE
+        KEY=
+        =
+        JUSTEMPTY
+    "#;
+
+        let vars = parse_env_str(input)?;
+        // None of these should be included
+        assert!(!vars.contains_key(""));
+        assert!(!vars.contains_key("KEY"));
+        assert!(!vars.contains_key("JUSTEMPTY"));
+        Ok(())
+    }
+
+    #[test]
+    fn test_parse_env_str_complex_comments() -> Result<()> {
+        let input = r#"
+        # Initial comment
+        KEY=VALUE  # inline comment
+        # Another comment line
+        ANOTHER=VAL     # comment after value
+        # Yet another comment
+    "#;
+
+        let vars = parse_env_str(input)?;
+        assert_eq!(vars.get("KEY"), Some(&"VALUE".to_string()));
+        assert_eq!(vars.get("ANOTHER"), Some(&"VAL".to_string()));
         Ok(())
     }
 }
