@@ -4,7 +4,10 @@ use std::{collections::HashMap, env, path::PathBuf, process::Command};
 
 mod env_parser;
 
-static STRICT_WHITELIST: &[&str] = &["PATH", "HOME", "SHELL", "USER", "SHLVL", "LANG", "TERM"];
+static STRICT_WHITELIST: &[&str] = &[
+    "PATH", "HOME", "SHELL", "USER", "SHLVL", "LANG", "TERM", "LOGNAME", "PWD", "OLDPWD", "EDITOR",
+    "VISUAL", "DISPLAY", "HOSTNAME",
+];
 
 #[derive(Parser, Debug)]
 #[command(
