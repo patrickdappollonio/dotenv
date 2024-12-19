@@ -7,7 +7,7 @@ edition = "2021"
 anyhow = "1.0.94"
 clap = { version = "4.5.23", features = ["derive"] }
 dirs = "5.0.1"
-libc = "0.2.168"
+libc = "0.2.169"
 tempfile = "3.14.0"
 which = "7.0.0"
 
