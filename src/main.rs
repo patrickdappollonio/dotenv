@@ -183,10 +183,12 @@ fn get_named_env_file(name: &str) -> Result<Option<PathBuf>> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use serial_test::serial;
     use std::{io::Write, path};
     use tempfile::NamedTempFile;
 
     #[test]
+    #[serial]
     fn test_is_truthy() {
         assert!(is_truthy("true"));
         assert!(is_truthy("True"));
@@ -204,6 +206,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_dotenv_strict_sets_strict_mode() -> anyhow::Result<()> {
         let mut file = NamedTempFile::new()?;
         writeln!(file, "DOTENV_STRICT=true")?;
@@ -234,6 +237,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_clear_environment() {
         env::set_var("TESTVAR", "VALUE");
         clear_environment();
@@ -241,6 +245,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_strict_mode_removes_unlisted_vars() -> anyhow::Result<()> {
         // Set some environment variables that should NOT persist in strict mode
         env::set_var("UNSAFE_VAR", "123");
@@ -292,6 +297,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_non_strict_mode_keeps_existing_vars() -> anyhow::Result<()> {
         // Simulate existing environment variable
         env::set_var("EXISTING_VAR", "EXISTING_VALUE");
@@ -324,6 +330,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_missing_environment_file() -> anyhow::Result<()> {
         let non_existent = PathBuf::from("this_file_does_not_exist.env");
 
@@ -338,6 +345,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_env_file_strict_mode_applied() -> anyhow::Result<()> {
         let mut file = NamedTempFile::new()?;
         writeln!(file, "DOTENV_STRICT=true")?;
@@ -368,6 +376,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_env_overrides_system_in_non_strict_mode() -> anyhow::Result<()> {
         // Set a system var
         env::set_var("FOO", "SYSTEM_VALUE");
