@@ -17,6 +17,7 @@ world
   - [Features](#features)
   - [Installation](#installation)
     - [Precompiled Binaries](#precompiled-binaries)
+    - [Homebrew](#homebrew)
     - [Rust and Cargo](#rust-and-cargo)
   - [Usage](#usage)
     - [Loading environment variables](#loading-environment-variables)
@@ -64,6 +65,14 @@ $ chmod +x dotenv
 
 # install it to /usr/local/bin
 $ sudo install -m 755 dotenv /usr/local/bin/dotenv
+```
+
+### Homebrew
+
+If you're on macOS or have Homebrew on Linux, you can also install `dotenv` using Homebrew:
+
+```bash
+brew install patrickdappollonio/tap/dotenv
 ```
 
 ### Rust and Cargo
