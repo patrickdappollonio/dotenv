@@ -90,8 +90,10 @@ fn strip_quotes(s: &str) -> &str {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use serial_test::serial;
 
     #[test]
+    #[serial]
     fn test_parse_env_line() {
         assert_eq!(
             parse_env_line("KEY=VALUE"),
@@ -107,6 +109,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_parse_env_str_basic() -> Result<()> {
         let input = r#"
             KEY=VALUE
@@ -120,6 +123,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_parse_env_str_comments_and_spaces() -> Result<()> {
         let input = r#"
             # A comment
@@ -138,6 +142,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_parse_env_str_shebang_and_complex_comment_lines() -> Result<()> {
         let input = r#"
             #!/usr/bin/env bash # this line should be ignored if present
@@ -153,6 +158,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_parse_env_str_invalid_lines() -> Result<()> {
         let input = r#"
             KEY=VALUE
@@ -171,6 +177,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_parse_env_str_quoted_values() -> Result<()> {
         let input = r#"
         KEY="some value with spaces"
@@ -192,6 +199,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_parse_env_str_values_with_equals() -> Result<()> {
         let input = r#"
         KEY=VALUE=WITH=EQUALS
@@ -208,6 +216,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_parse_env_str_whitespace_around_equals() -> Result<()> {
         let input = r#"
         KEY    =     VALUE
@@ -221,6 +230,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_parse_env_str_empty_key_or_value() -> Result<()> {
         let input = r#"
         =VALUE
@@ -238,6 +248,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_parse_env_str_complex_comments() -> Result<()> {
         let input = r#"
         # Initial comment
