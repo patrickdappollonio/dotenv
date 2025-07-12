@@ -13,11 +13,11 @@ static STRICT_WHITELIST: &[&str] = &[
 #[command(
     name = "dotenv",
     author = "Patrick D'appollonio <hey@patrickdap.com>",
-    about = "Dynamically inject just the environment variables you allow to the command you're about to execute."
+    about = "Dynamically inject environment variables from .env files into the command you're about to execute. By default reads .env from the current directory unless --file is specified."
 )]
 struct Cli {
-    /// Specify a custom environment file path (e.g. `/path/to/my.env`)
-    #[arg(short = 'f', long = "envfile")]
+    /// Specify a custom environment file path (defaults to .env in current directory)
+    #[arg(short = 'f', long = "file")]
     envfile: Option<PathBuf>,
 
     /// Specify the named environment file in ~/.dotenv/ (e.g. `example` for ~/.dotenv/example.env)
@@ -41,35 +41,14 @@ fn main() -> Result<()> {
         anyhow::bail!("No command provided.");
     }
 
-    // Determine the environment file to use (priority: custom file > named environment > local .env)
-    let env_file = if let Some(custom_path) = &cli.envfile {
-        // Custom file path specified - it must exist
-        if !custom_path.exists() {
-            anyhow::bail!(
-                "custom environment file does not exist: {}",
-                custom_path.display()
-            );
-        }
-        Some(custom_path.clone())
-    } else if let Some(name) = &cli.environment {
-        // Named environment file
-        get_named_env_file(name)?
-    } else {
-        // Default to local .env file if it exists
-        let current = env::current_dir().context("Could not get current directory")?;
-        let file = current.join(".env");
-        if file.exists() {
-            Some(file)
-        } else {
-            None
-        }
-    };
-
-    // Load environment variables from the file if the file exists
-    let env_vars_from_file = if let Some(file_path) = env_file {
-        if file_path.exists() {
-            env_parser::parse_env_file(&file_path).with_context(|| {
-                format!("Could not parse environment file: {}", file_path.display(),)
+    // Load global environment file first (if provided)
+    let mut env_vars_from_file = if let Some(name) = &cli.environment {
+        if let Some(global_file) = get_named_env_file(name)? {
+            env_parser::parse_env_file(&global_file).with_context(|| {
+                format!(
+                    "Could not parse global environment file: {}",
+                    global_file.display()
+                )
             })?
         } else {
             HashMap::new()
@@ -77,6 +56,39 @@ fn main() -> Result<()> {
     } else {
         HashMap::new()
     };
+
+    // Load local environment file second (overwrites global)
+    let local_env_vars = if let Some(custom_path) = &cli.envfile {
+        // Custom file path specified - it must exist
+        if !custom_path.exists() {
+            anyhow::bail!(
+                "custom environment file does not exist: {}",
+                custom_path.display()
+            );
+        }
+        env_parser::parse_env_file(custom_path).with_context(|| {
+            format!(
+                "Could not parse custom environment file: {}",
+                custom_path.display()
+            )
+        })?
+    } else {
+        // Default to local .env file if it exists
+        let current = env::current_dir().context("Could not get current directory")?;
+        let file = current.join(".env");
+        if file.exists() {
+            env_parser::parse_env_file(&file).with_context(|| {
+                format!("Could not parse local environment file: {}", file.display())
+            })?
+        } else {
+            HashMap::new()
+        }
+    };
+
+    // Merge local environment variables into global ones (local overwrites global)
+    for (key, value) in local_env_vars {
+        env_vars_from_file.insert(key, value);
+    }
 
     // Check if there is an env var for strict mode
     if !strict {
