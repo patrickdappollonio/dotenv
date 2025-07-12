@@ -32,6 +32,9 @@ world
 - **Automatic `.env` loading:**
   If an `.env` file is present in the current directory, `dotenv` loads it automatically.
 
+- **Multiline support:**
+  Handle complex multiline values using quoted strings, escape sequences (`\n`, `\t`), and line continuation with backslashes.
+
 - **Custom environment file paths:**
   Use `--envfile <path>` or `-f <path>` to load variables from any custom file path.
 
@@ -192,3 +195,104 @@ DOTENV_STRICT=true
 - Trailing comments after `#` on the same line are also ignored, and the lines are space-trimmed.
 - Empty lines are ignored.
 - Shebangs (`#!`) are ignored and have no effect on how we run the command.
+
+### Multiline Support
+
+`dotenv` supports several ways to handle multiline values:
+
+#### Quoted Multiline Values
+
+Wrap multiline content in quotes (single or double):
+
+```env
+WELCOME_MESSAGE="Welcome to our application!
+This is a multiline welcome message
+that spans several lines."
+
+SQL_QUERY="SELECT users.name,
+           users.email,
+           COUNT(posts.id) as post_count
+    FROM users
+    LEFT JOIN posts ON users.id = posts.user_id
+    WHERE users.active = true
+    GROUP BY users.id"
+```
+
+#### Escape Sequences
+
+Use escape sequences within quoted values:
+
+```env
+FORMATTED_TEXT="Line 1\nLine 2\nLine 3\n\tIndented with tab"
+PATHS="C:\\Program Files\\App\\bin\nC:\\Windows\\System32"
+QUOTED_MESSAGE="He said \"Hello World\" to everyone"
+```
+
+Supported escape sequences:
+- `\n` - newline
+- `\t` - tab
+- `\r` - carriage return
+- `\\` - literal backslash
+- `\"` - literal double quote
+- `\'` - literal single quote
+
+#### Line Continuation
+
+Use backslash (`\`) at the end of a line to continue on the next line:
+
+```env
+LONG_PATH=/very/long/path/that/continues \
+/across/multiple \
+/lines/for/readability
+
+CLASSPATH=/usr/lib/app.jar:\
+/usr/lib/dependency1.jar:\
+/usr/lib/dependency2.jar
+```
+
+#### Smart Comment Handling
+
+Comments are stripped from the end of lines, but preserved inside quoted strings:
+
+```env
+DATABASE_URL="postgresql://user:pass@localhost/db#anchor"  # Real comment
+COMMAND="echo 'Process # 123'"  # The # inside quotes is preserved
+```
+
+### Common Use Cases
+
+#### Configuration Files
+```env
+NGINX_CONFIG="server {
+    listen 80;
+    server_name example.com;
+    location / {
+        proxy_pass http://localhost:3000;
+    }
+}"
+```
+
+#### SQL Queries
+```env
+USER_STATS_QUERY="SELECT
+    u.id,
+    u.name,
+    COUNT(p.id) as post_count,
+    MAX(p.created_at) as last_post
+FROM users u
+LEFT JOIN posts p ON u.id = p.user_id
+GROUP BY u.id, u.name
+ORDER BY post_count DESC"
+```
+
+#### JSON Configuration
+```env
+API_CONFIG="{
+  \"timeout\": 30,
+  \"retries\": 3,
+  \"endpoints\": {
+    \"users\": \"/api/v1/users\",
+    \"posts\": \"/api/v1/posts\"
+  }
+}"
+```

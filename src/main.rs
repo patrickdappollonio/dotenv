@@ -158,7 +158,7 @@ fn main() -> Result<()> {
     // Grab the exit code from the executed program
     let status = cmd
         .status()
-        .with_context(|| format!("Failed to execute command: {}", program))?;
+        .with_context(|| format!("Failed to execute command: {program}"))?;
     std::process::exit(status.code().unwrap_or(1));
 }
 
@@ -182,7 +182,7 @@ fn get_named_env_file(name: &str) -> Result<Option<PathBuf>> {
     let home_dir = dirs::home_dir().context("Could not get home directory: the home directory is required to fetch specific environment files.")?;
     let dotenv_dir = home_dir.join(".dotenv");
 
-    let file = dotenv_dir.join(format!("{}.env", name));
+    let file = dotenv_dir.join(format!("{name}.env"));
     if file.exists() {
         Ok(Some(file))
     } else {
