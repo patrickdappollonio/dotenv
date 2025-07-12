@@ -3,7 +3,9 @@
 [![Download](https://img.shields.io/badge/download-here-brightgreen?logo=github)](https://github.com/patrickdappollonio/dotenv/releases)
 [![Github Downloads](https://img.shields.io/github/downloads/patrickdappollonio/dotenv/total?color=orange&label=github%20downloads&logo=github)](https://github.com/patrickdappollonio/dotenv/releases)
 
-**`dotenv`** is a small command-line utility that allows you to **inject environment variables from a `.env` file into a command's environment before running it.** It also supports a "strict" mode that only includes variables from the `.env` file without leaking potentially private environment variables, plus a few common whitelist of essential environment variables, like `PATH`, `HOME` or even `SHLVL`.
+**`dotenv`** is a small command-line utility that allows you to **inject environment variables from `.env` files into a command's environment before running it.** By default it reads `.env` from the current directory unless `--file` is specified.
+
+It also supports a "strict" mode that only includes variables from the `.env` file without including any other environment variable from your machine except those often required for commands to operate, like `$PATH`, `$HOME` or even `$SHLVL`. Super useful to allow commands to run without leaking sensitive environment variables to them.
 
 ```bash
 $ cat .env
@@ -21,10 +23,21 @@ world
     - [Rust and Cargo](#rust-and-cargo)
   - [Usage](#usage)
     - [Loading environment variables](#loading-environment-variables)
-    - [From the current working directory](#from-the-current-working-directory)
-    - [From a named environment](#from-a-named-environment)
+    - [From a named environment (global)](#from-a-named-environment-global)
+    - [From the current working directory (local)](#from-the-current-working-directory-local)
+    - [From a custom file path (local)](#from-a-custom-file-path-local)
+    - [Layered environment loading](#layered-environment-loading)
     - [Strict Mode](#strict-mode)
   - [`.env` Format](#env-format)
+    - [Multiline Support](#multiline-support)
+      - [Quoted Multiline Values](#quoted-multiline-values)
+      - [Escape Sequences](#escape-sequences)
+      - [Line Continuation](#line-continuation)
+      - [Smart Comment Handling](#smart-comment-handling)
+    - [Common Use Cases](#common-use-cases)
+      - [Configuration Files](#configuration-files)
+      - [SQL Queries](#sql-queries)
+      - [JSON Configuration](#json-configuration)
 
 ## Features
 
@@ -34,8 +47,14 @@ world
 - **Multiline support:**
   Handle complex multiline values using quoted strings, escape sequences (`\n`, `\t`), and line continuation with backslashes.
 
-- **Named environments:**
+- **Named environments (global):**
   Use `--environment <name>` to load variables from `$HOME/.dotenv/<name>.env`.
+
+- **Custom environment file paths (local):**
+  Use `--file <path>` or `-f <path>` to load variables from any custom file path.
+
+- **Layered environment loading:**
+  Combine global and local environments, with local variables overriding global ones.
 
 - **Strict mode:**
   Use `--strict` to start the command with only the variables from the `.env` file and a minimal whitelist (like `PATH`, `HOME`, etc.).
@@ -96,15 +115,36 @@ brew install patrickdappollonio/tap/dotenv
 
 ```bash
 dotenv [OPTIONS] -- COMMAND [ARGS...]
+
+Options:
+  -f, --file <FILE>                Specify a custom environment file path (defaults to .env in current directory)
+  -e, --environment <ENVIRONMENT>  Specify a named environment file in ~/.dotenv/
+      --strict                     Strict mode: only .env variables + minimal whitelist
 ```
 
 ### Loading environment variables
 
-`dotenv` supports two modes of operation: loading environment variables from a `.env` file in the current directory or from a named environment file.
+`dotenv` supports layered environment loading:
 
-### From the current working directory
+1. **Global environment** (optional): Load from `~/.dotenv/<name>.env` using `-e/--environment`
+2. **Local environment** (optional): Load from either `.env` in current directory OR custom file using `-f/--file` (mutually exclusive)
+3. **Local overwrites global**: Variables from local environment override those from global environment
 
-By default, `dotenv` loads environment variables from a `.env` file in the current working directory if you specify no arguments:
+### From a named environment (global)
+
+Global environment files are stored in `$HOME/.dotenv/` and can be loaded by specifying `--environment <name>` or `-e <name>`:
+
+```bash
+$ cat $HOME/.dotenv/example.env
+FOO=bar
+
+$ dotenv --environment example -- printenv FOO
+bar
+```
+
+### From the current working directory (local)
+
+By default, `dotenv` loads environment variables from a `.env` file in the current working directory:
 
 ```bash
 $ cat .env
@@ -114,19 +154,47 @@ $ dotenv -- printenv HELLO
 world
 ```
 
-### From a named environment
+### From a custom file path (local)
 
-If you prefer custom environment variables, you can overwrite `dotenv`'s default `.env` file by specifying a different file. This file however has to come from `dotenv`'s configuration directory, which is `$HOME/.dotenv/`.
-
-Any file here named `<name>.env` can be loaded by specifying `--environment <name>` or `-e <name>`:
+If you need to load environment variables from a specific file path (not in the standard locations), you can specify a custom file using `--file <path>` or `-f <path>`:
 
 ```bash
-$ cat $HOME/.dotenv/example.env
-FOO=bar
+$ cat /path/to/my/config.env
+DATABASE_URL=postgresql://localhost:5432/mydb
 
-$ dotenv --environment example -- printenv FOO
-bar
+$ dotenv --file /path/to/my/config.env -- printenv DATABASE_URL
+postgresql://localhost:5432/mydb
+
+# Short form also works
+$ dotenv -f /path/to/my/config.env -- printenv DATABASE_URL
+postgresql://localhost:5432/mydb
 ```
+
+**Note:** The custom file path must exist, or `dotenv` will return an error. This is a local environment that takes precedence over the local `.env` file and can override global environment variables.
+
+### Layered environment loading
+
+You can combine global and local environments. Local variables will override global ones:
+
+```bash
+$ cat ~/.dotenv/production.env
+API_URL=https://api.prod.example.com
+DEBUG=false
+
+$ cat .env
+DEBUG=true
+LOCAL_VAR=development_value
+
+$ dotenv -e production -- printenv API_URL DEBUG LOCAL_VAR
+https://api.prod.example.com
+true
+development_value
+```
+
+In this example:
+- `API_URL` comes from the global environment (production)
+- `DEBUG` is overridden by the local environment (`true` instead of `false`)
+- `LOCAL_VAR` is only in the local environment
 
 ### Strict Mode
 
