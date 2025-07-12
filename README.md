@@ -3,7 +3,9 @@
 [![Download](https://img.shields.io/badge/download-here-brightgreen?logo=github)](https://github.com/patrickdappollonio/dotenv/releases)
 [![Github Downloads](https://img.shields.io/github/downloads/patrickdappollonio/dotenv/total?color=orange&label=github%20downloads&logo=github)](https://github.com/patrickdappollonio/dotenv/releases)
 
-**`dotenv`** is a small command-line utility that allows you to **inject environment variables from `.env` files into a command's environment before running it.** By default it reads `.env` from the current directory unless `--file` is specified. It also supports a "strict" mode that only includes variables from the `.env` file without leaking potentially private environment variables, plus a few common whitelist of essential environment variables, like `PATH`, `HOME` or even `SHLVL`.
+**`dotenv`** is a small command-line utility that allows you to **inject environment variables from `.env` files into a command's environment before running it.** By default it reads `.env` from the current directory unless `--file` is specified.
+
+It also supports a "strict" mode that only includes variables from the `.env` file without including any other environment variable from your machine except those often required for commands to operate, like `$PATH`, `$HOME` or even `$SHLVL`. Super useful to allow commands to run without leaking sensitive environment variables to them.
 
 ```bash
 $ cat .env
@@ -27,6 +29,15 @@ world
     - [Layered environment loading](#layered-environment-loading)
     - [Strict Mode](#strict-mode)
   - [`.env` Format](#env-format)
+    - [Multiline Support](#multiline-support)
+      - [Quoted Multiline Values](#quoted-multiline-values)
+      - [Escape Sequences](#escape-sequences)
+      - [Line Continuation](#line-continuation)
+      - [Smart Comment Handling](#smart-comment-handling)
+    - [Common Use Cases](#common-use-cases)
+      - [Configuration Files](#configuration-files)
+      - [SQL Queries](#sql-queries)
+      - [JSON Configuration](#json-configuration)
 
 ## Features
 
