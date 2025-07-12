@@ -85,7 +85,7 @@ fn strip_inline_comment(line: &str) -> &str {
                 quote_char = ch;
             }
             ch if in_quotes && ch == quote_char => in_quotes = false,
-            '#' if !in_quotes => return &line[..i].trim_end(),
+            '#' if !in_quotes => return line[..i].trim_end(),
             _ => {}
         }
     }
