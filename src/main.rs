@@ -16,6 +16,10 @@ static STRICT_WHITELIST: &[&str] = &[
     about = "Dynamically inject just the environment variables you allow to the command you're about to execute."
 )]
 struct Cli {
+    /// Specify a custom environment file path (e.g. `/path/to/my.env`)
+    #[arg(short = 'f', long = "envfile")]
+    envfile: Option<PathBuf>,
+
     /// Specify the named environment file in ~/.dotenv/ (e.g. `example` for ~/.dotenv/example.env)
     #[arg(short, long)]
     environment: Option<String>,
@@ -37,17 +41,27 @@ fn main() -> Result<()> {
         anyhow::bail!("No command provided.");
     }
 
-    // Determine the environment file to use
-    let env_file = match &cli.environment {
-        Some(name) => get_named_env_file(name)?,
-        None => {
-            let current = env::current_dir().context("Could not get current directory")?;
-            let file = current.join(".env");
-            if file.exists() {
-                Some(file)
-            } else {
-                None
-            }
+    // Determine the environment file to use (priority: custom file > named environment > local .env)
+    let env_file = if let Some(custom_path) = &cli.envfile {
+        // Custom file path specified - it must exist
+        if !custom_path.exists() {
+            anyhow::bail!(
+                "custom environment file does not exist: {}",
+                custom_path.display()
+            );
+        }
+        Some(custom_path.clone())
+    } else if let Some(name) = &cli.environment {
+        // Named environment file
+        get_named_env_file(name)?
+    } else {
+        // Default to local .env file if it exists
+        let current = env::current_dir().context("Could not get current directory")?;
+        let file = current.join(".env");
+        if file.exists() {
+            Some(file)
+        } else {
+            None
         }
     };
 

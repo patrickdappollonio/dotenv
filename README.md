@@ -23,6 +23,7 @@ world
     - [Loading environment variables](#loading-environment-variables)
     - [From the current working directory](#from-the-current-working-directory)
     - [From a named environment](#from-a-named-environment)
+    - [From a custom file path](#from-a-custom-file-path)
     - [Strict Mode](#strict-mode)
   - [`.env` Format](#env-format)
 
@@ -30,6 +31,9 @@ world
 
 - **Automatic `.env` loading:**
   If an `.env` file is present in the current directory, `dotenv` loads it automatically.
+
+- **Custom environment file paths:**
+  Use `--envfile <path>` or `-f <path>` to load variables from any custom file path.
 
 - **Named environments:**
   Use `--environment <name>` to load variables from `$HOME/.dotenv/<name>.env`.
@@ -93,11 +97,16 @@ brew install patrickdappollonio/tap/dotenv
 
 ```bash
 dotenv [OPTIONS] -- COMMAND [ARGS...]
+
+Options:
+  -f, --envfile <ENVFILE>          Specify a custom environment file path
+  -e, --environment <ENVIRONMENT>  Specify a named environment file in ~/.dotenv/
+      --strict                     Strict mode: only .env variables + minimal whitelist
 ```
 
 ### Loading environment variables
 
-`dotenv` supports two modes of operation: loading environment variables from a `.env` file in the current directory or from a named environment file.
+`dotenv` supports three modes of operation: loading environment variables from a custom file path, from a `.env` file in the current directory, or from a named environment file. The priority order is: custom file path (highest) → named environment → local `.env` file (lowest).
 
 ### From the current working directory
 
@@ -124,6 +133,24 @@ FOO=bar
 $ dotenv --environment example -- printenv FOO
 bar
 ```
+
+### From a custom file path
+
+If you need to load environment variables from a specific file path (not in the standard locations), you can specify a custom file using `--envfile <path>` or `-f <path>`:
+
+```bash
+$ cat /path/to/my/config.env
+DATABASE_URL=postgresql://localhost:5432/mydb
+
+$ dotenv --envfile /path/to/my/config.env -- printenv DATABASE_URL
+postgresql://localhost:5432/mydb
+
+# Short form also works
+$ dotenv -f /path/to/my/config.env -- printenv DATABASE_URL
+postgresql://localhost:5432/mydb
+```
+
+**Note:** The custom file path must exist, or `dotenv` will return an error. This takes priority over both named environments and local `.env` files.
 
 ### Strict Mode
 
