@@ -4,7 +4,7 @@ version = "0.0.0"
 edition = "2021"
 
 [dependencies]
-anyhow = "1.0.98"
+anyhow = "1.0.99"
 clap = { version = "4.5.41", features = ["derive"] }
 dirs = "6.0.0"
 libc = "0.2.174"
