@@ -11,7 +11,7 @@ libc = "0.2.174"
 
 [dev-dependencies]
 serial_test = "3.2.0"
-tempfile = "3.20.0"
+tempfile = "3.21.0"
 
 [profile.release]
 opt-level = "z"   # Optimize for size.
