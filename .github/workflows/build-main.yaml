@@ -28,7 +28,7 @@ jobs:
             archive: windows-x86_64
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - shell: bash
         run: |
           # Update the version in Cargo.toml
