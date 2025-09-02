@@ -4,14 +4,15 @@ version = "0.0.0"
 edition = "2021"
 
 [dependencies]
-anyhow = "1.0.98"
-clap = { version = "4.5.41", features = ["derive"] }
+anyhow = "1.0.99"
+clap = { version = "4.5.46", features = ["derive"] }
 dirs = "6.0.0"
-libc = "0.2.174"
+libc = "0.2.175"
+signal-hook = "0.3"
 
 [dev-dependencies]
 serial_test = "3.2.0"
-tempfile = "3.20.0"
+tempfile = "3.21.0"
 
 [profile.release]
 opt-level = "z"   # Optimize for size.

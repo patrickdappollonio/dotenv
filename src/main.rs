@@ -1,6 +1,13 @@
 use anyhow::{Context, Result};
 use clap::Parser;
-use std::{collections::HashMap, env, path::PathBuf, process::Command};
+use signal_hook::{consts::SIGTERM, flag as signal_flag};
+use std::{
+    collections::HashMap,
+    env,
+    path::PathBuf,
+    process::Command,
+    sync::{atomic::AtomicBool, Arc},
+};
 
 mod env_parser;
 
@@ -167,11 +174,47 @@ fn main() -> Result<()> {
         }
     }
 
-    // Grab the exit code from the executed program
-    let status = cmd
-        .status()
+    // Set up signal handling
+    let term_signal = Arc::new(AtomicBool::new(false));
+    signal_flag::register(SIGTERM, Arc::clone(&term_signal))?;
+    signal_flag::register(signal_hook::consts::SIGINT, Arc::clone(&term_signal))?;
+
+    // Spawn the child process
+    let mut child = cmd
+        .spawn()
         .with_context(|| format!("Failed to execute command: {program}"))?;
-    std::process::exit(status.code().unwrap_or(1));
+
+    // Wait for child to complete, checking for signals
+    loop {
+        // Check if we received a termination signal
+        if term_signal.load(std::sync::atomic::Ordering::Relaxed) {
+            // Don't forward the signal - the child receives it naturally from the terminal
+            // Just wait for the child to complete its graceful shutdown
+            match child.wait() {
+                Ok(status) => std::process::exit(status.code().unwrap_or(1)),
+                Err(_) => std::process::exit(1),
+            }
+        }
+
+        // Check if child has finished
+        match child.try_wait() {
+            Ok(Some(status)) => {
+                // Child finished normally
+                std::process::exit(status.code().unwrap_or(1));
+            }
+            Ok(None) => {
+                // Child still running, continue monitoring
+                std::thread::sleep(std::time::Duration::from_millis(50));
+            }
+            Err(_) => {
+                // Error checking child status, fall back to blocking wait
+                match child.wait() {
+                    Ok(status) => std::process::exit(status.code().unwrap_or(1)),
+                    Err(_) => std::process::exit(1),
+                }
+            }
+        }
+    }
 }
 
 /// Clear all environment variables
