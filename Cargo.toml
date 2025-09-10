@@ -12,7 +12,7 @@ signal-hook = "0.3"
 
 [dev-dependencies]
 serial_test = "3.2.0"
-tempfile = "3.21.0"
+tempfile = "3.22.0"
 
 [profile.release]
 opt-level = "z"   # Optimize for size.
