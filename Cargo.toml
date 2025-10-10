@@ -7,7 +7,7 @@ edition = "2021"
 anyhow = "1.0.99"
 clap = { version = "4.5.46", features = ["derive"] }
 dirs = "6.0.0"
-libc = "0.2.175"
+libc = "0.2.177"
 signal-hook = "0.3"
 
 [dev-dependencies]
