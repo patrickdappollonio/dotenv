@@ -163,10 +163,7 @@ fn main() -> Result<()> {
                 let ppid = libc::getppid();
                 if ppid == 1 {
                     // The parent is init, meaning we won't get PDEATHSIG if the original parent is gone
-                    return Err(Error::new(
-                        ErrorKind::Other,
-                        "Unable to operate on a program whose parent is init",
-                    ));
+                    panic!("Unable to operate on a program whose parent is init");
                 }
 
                 Ok(())
